@@ -9,7 +9,17 @@
 """
 
 import random
+
+from math import floor
+
 from py3hax import *
+
+
+def compareNodeBandwidth(this, other):
+    if this.bandwidth < other.bandwidth: return -1
+    elif this.bandwidth > other.bandwidth: return 1
+    else: return 0
+
 
 class Node(object):
     def __init__(self, name, port, evil=False, reliability=0.96):
@@ -36,6 +46,20 @@ class Node(object):
 
         # random hex string.
         self._id = "".join(random.choice("0123456789ABCDEF") for _ in xrange(40))
+
+        # Some completely made up number for the bandwidth of this guard.
+        self._bandwidth = 0
+
+    @property
+    def bandwidth(self, alpha=1.0, beta=0.5, bandwidth_max=100000):
+        """Completely make-believe bandwith.  It's calculated as a random point
+        on the probability density function of a gamma distribution over
+        (0,100000] in KB/s.
+        """
+        if not self._bandwidth:
+            self._bandwidth = \
+                int(floor(random.gammavariate(alpha, beta) * bandwidth_max))
+        return self._bandwidth
 
     def getName(self):
         """Return the human-readable name for this node."""
@@ -80,6 +104,12 @@ class Node(object):
            mustn't call this."""
         return self._evil
 
+    def seemsDystopic(self):
+        """Return true iff this node seems like one we could use in a
+           dystopic world."""
+        return self.getPort() in [80, 443]
+
+
 def _randport(pfascistfriendly):
     """generate and return a random port.  If 'pfascistfriendly' is true,
        return a port in the FascistPortList.  Otherwise return any random
@@ -88,6 +118,7 @@ def _randport(pfascistfriendly):
         return random.choice([80, 443])
     else:
         return random.randint(1,65535)
+
 
 class Network(object):
 
@@ -218,7 +249,7 @@ class SniperNetwork(_NetworkDecorator):
         return result
 
 class FlakyNetwork(_NetworkDecorator):
-    """A network where all connections succ3eed only with probability
+    """A network where all connections succeed only with probability
        'reliability', regardless of whether the node is up or down."""
     def __init__(self, network, reliability=0.9):
         super(FlakyNetwork, self).__init__(network)
